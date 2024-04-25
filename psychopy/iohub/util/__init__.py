@@ -301,6 +301,16 @@ def getDevicePaths(device_name=""):
     except ImportError:
         logging.debug("No PupilLabs device configuration file found.")
 
+    try:  # eyelogic eyetrackers
+        logging.debug("Looking for EyeLogic device configuration file...")
+        import psychopy_eyetracker_eyelogic.eyelogic as eyelogic
+        deviceConfig = _getDevicePaths(os.path.dirname(eyelogic.__file__))
+        if deviceConfig:
+            logging.debug("Found EyeLogic device configuration file.")
+            scs_yaml_paths.extend(deviceConfig)
+    except ImportError:
+        logging.debug("No EyeLogic device configuration file found.")
+
     # use this method for built-in devices
     iohub_device_path = module_directory(import_device)
     if device_name:

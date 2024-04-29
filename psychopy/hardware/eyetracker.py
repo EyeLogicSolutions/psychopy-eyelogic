@@ -155,7 +155,6 @@ class EyetrackerCalibration:
                 'text_color': textColor,
                 'screen_background_color': getattr(self.win._color, self.colorSpace),
             }
-
         elif tracker == 'eyetracker.hw.mouse.EyeTracker':
             # As MouseGaze
             targetAttrs = dict(target)
@@ -175,6 +174,11 @@ class EyetrackerCalibration:
                 'color_type': self.colorSpace,
                 'text_color': textColor,
                 'screen_background_color': getattr(self.win._color, self.colorSpace),
+            }
+        elif tracker == 'eyetracker.hw.eyelogic.EyeTracker':
+            # As EyeLogic
+            asDict = {
+                'type': self.targetLayout
             }
         # Return
         for key, value in asDict.items():

@@ -1049,7 +1049,7 @@ class ioHubConnection():
         # >>>> Wait for iohub server ready signal ....
         hubonline = False
         # timeout if ioServer does not reply in 30 seconds
-        timeout_duration = self._iohub_server_config.get('start_process_timeout', 30.0)
+        timeout_duration = self._iohub_server_config.get('start_process_timeout', 30000.0)
         timeout_time = Computer.getTime() + timeout_duration
         while hubonline is False and Computer.getTime() < timeout_time:
             r = self._sendToHubServer(['GET_IOHUB_STATUS', ])

@@ -281,6 +281,9 @@ class Color:
         if isinstance(color, str):
             if color == "":
                 color = "none"
+            # If None, skip the rest of validation - we know it's transparent
+            if color == "none":
+                return "none", "named"
         # Handle everything as an array
         if not isinstance(color, np.ndarray):
             color = np.array(color)
@@ -487,10 +490,12 @@ class Color:
         return self.__deepcopy__()
 
     def __deepcopy__(self):
-        dupe = self.__class__(
-            self._requested, self._requestedSpace, self.contrast)
-        dupe.rgba = self.rgba
+        dupe = self.__class__(None, contrast=self.contrast)
+        dupe._requested = self._requested
+        dupe._requestedSpace = self._requestedSpace
         dupe.valid = self.valid
+        dupe._cache = self._cache
+
         return dupe
 
     def getReadable(self, contrast=4.5/21):

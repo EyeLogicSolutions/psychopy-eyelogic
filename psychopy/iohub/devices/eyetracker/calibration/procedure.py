@@ -57,7 +57,6 @@ class BaseCalibrationProcedure:
             color_type = display.getColorSpace()
             self._calibration_args['color_type'] = color_type
 
-
         cal_type = self.getCalibSetting('type')
 
         if cal_type in target_position_count:
@@ -155,21 +154,13 @@ class BaseCalibrationProcedure:
         unit_type = self.getCalibSetting('unit_type')
 
         def setDefaultCalibrationTarget():
-            # convert sizes to stimulus units
-            radiusPix = self.getCalibSetting(['target_attributes', 'outer_diameter']) / 2
-            radiusObj = layout.Size(radiusPix, units=unit_type, win=self.window)
-            radius = getattr(radiusObj, unit_type)[1]
-            innerRadiusPix = self.getCalibSetting(['target_attributes', 'inner_diameter']) / 2
-            innerRadiusObj = layout.Size(innerRadiusPix, units=unit_type, win=self.window)
-            innerRadius = getattr(innerRadiusObj, unit_type)[1]
-            # make target
             self.targetStim = visual.TargetStim(
                 self.window, name="CP", style="circles",
-                radius=radius,
+                radius=self.getCalibSetting(['target_attributes', 'outer_diameter']) / 2,
                 fillColor=self.getCalibSetting(['target_attributes', 'outer_fill_color']),
                 borderColor=self.getCalibSetting(['target_attributes', 'outer_line_color']),
                 lineWidth=self.getCalibSetting(['target_attributes', 'outer_stroke_width']),
-                innerRadius=innerRadius,
+                innerRadius=self.getCalibSetting(['target_attributes', 'inner_diameter']) / 2,
                 innerFillColor=self.getCalibSetting(['target_attributes', 'inner_fill_color']),
                 innerBorderColor=self.getCalibSetting(['target_attributes', 'inner_line_color']),
                 innerLineWidth=self.getCalibSetting(['target_attributes', 'inner_stroke_width']),
@@ -312,7 +303,8 @@ class BaseCalibrationProcedure:
                     else:
                         # In contract phase
                         t = (elapsed_time-target_duration/2) / (target_duration/2)
-                        new_size = stim_size*animate_expansion_ratio - t * (stim_size*animate_expansion_ratio - min_stim_size)
+                        new_size = stim_size*animate_expansion_ratio - t * (
+                            stim_size*animate_expansion_ratio - min_stim_size)
                 if new_size:
                     self.targetStim.size = new_size, new_size
 
@@ -398,7 +390,6 @@ class BaseCalibrationProcedure:
 
             self.MsgPump()
             gevent.sleep(0.001)
-
 
     def resetTargetProperties(self):
         self.targetStim.size = self.originalTargetSize

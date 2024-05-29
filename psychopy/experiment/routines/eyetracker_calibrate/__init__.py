@@ -4,6 +4,8 @@ from psychopy.experiment import Param
 from pathlib import Path
 from psychopy.alerts import alert
 
+import typing as T
+
 
 class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
     categories = ['Eyetracking']
@@ -28,6 +30,34 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
 
         self.exp.requirePsychopyLibs(['iohub', 'hardware'])
 
+        # NOTE: this function must be called AFTER defining any other depends rules for parameter
+        def hideParameterForTrackers(category: str, parameter: str, trackers: T.List[str]):
+            assert parameter in self.params.keys()
+            assert self.params[parameter].categ == category
+            dummyName = 'dummyVariable' + category.title()
+            if dummyName not in self.params.keys():
+                self.params[dummyName] = Param(True,
+                                              valType='bool', inputType="bool", categ=category,
+                                              hint=_translate(""),
+                                              label=_translate(""))
+                self.depends.append(
+                    {"dependsOn": dummyName,  # must be param name
+                     "condition": "",  # val to check for
+                     "param": dummyName,  # param property to alter
+                     "true": "hide",  # what to do with param if condition is True
+                     "false": "show",  # permitted: hide, show, enable, disable
+                     }
+                )
+
+            self.depends.append(
+                {"dependsOn": dummyName,  # must be param name
+                 "condition": "and hideParamForEyetrackers( ['" + "', '".join(trackers) + "'] )",
+                 "param": parameter,  # param property to alter
+                 "true": "hide",  # what to do with param if condition is True
+                 "false": "show",  # permitted: hide, show, enable, disable
+                 }
+            )
+
         # Basic params
         self.order += [
             "targetLayout",
@@ -48,10 +78,12 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                             valType='bool', inputType="bool", categ='Basic',
                                             hint=_translate("Should the order of target positions be randomised?"),
                                             label=_translate("Randomise target positions"))
+        hideParameterForTrackers('Basic', 'randomisePos', ['EyeLogic'])
         self.params['textColor'] = Param(textColor,
                                      valType='color', inputType="color", categ='Basic',
                                      hint=_translate("Text foreground color"),
                                      label=_translate("Text color"))
+        hideParameterForTrackers('Basic', 'textColor', ['EyeLogic'])
         # Target Params
         self.order += [
             "targetStyle",
@@ -70,21 +102,25 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                      valType='color', inputType="color", categ='Target',
                                      hint=_translate("Fill color of the inner part of the target"),
                                      label=_translate("Inner fill color"))
+        hideParameterForTrackers('Target', 'innerFillColor', ['EyeLogic'])
 
         self.params['innerBorderColor'] = Param(innerBorderColor,
                                            valType='color', inputType="color", categ='Target',
                                            hint=_translate("Border color of the inner part of the target"),
                                            label=_translate("Inner border color"))
+        hideParameterForTrackers('Target', 'innerBorderColor', ['EyeLogic'])
 
         self.params['fillColor'] = Param(fillColor,
                                          valType='color', inputType="color", categ='Target',
                                          hint=_translate("Fill color of the outer part of the target"),
                                          label=_translate("Outer fill color"))
+        hideParameterForTrackers('Target', 'fillColor', ['EyeLogic'])
 
         self.params['borderColor'] = Param(borderColor,
                                            valType='color', inputType="color", categ='Target',
                                            hint=_translate("Border color of the outer part of the target"),
                                            label=_translate("Outer border color"))
+        hideParameterForTrackers('Target', 'borderColor', ['EyeLogic'])
 
         self.params['colorSpace'] = Param(colorSpace,
                                           valType='str', inputType="choice", categ='Target',
@@ -92,32 +128,38 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                           hint=_translate(
                                               "In what format (color space) have you specified the colors? (rgb, dkl, lms, hsv)"),
                                           label=_translate("Color space"))
+        hideParameterForTrackers('Target', 'colorSpace', ['EyeLogic'])
 
         self.params['borderWidth'] = Param(borderWidth,
                                            valType='num', inputType="single", categ='Target',
                                            hint=_translate("Width of the line around the outer part of the target"),
                                            label=_translate("Outer border width"))
+        hideParameterForTrackers('Target', 'borderWidth', ['EyeLogic'])
 
         self.params['innerBorderWidth'] = Param(innerBorderWidth,
                                            valType='num', inputType="single", categ='Target',
                                            hint=_translate("Width of the line around the inner part of the target"),
                                            label=_translate("Inner border width"))
+        hideParameterForTrackers('Target', 'innerBorderWidth', ['EyeLogic'])
 
         self.params['outerRadius'] = Param(outerRadius,
                                            valType='num', inputType="single", categ='Target',
                                            hint=_translate("Size (radius) of the outer part of the target"),
                                            label=_translate("Outer radius"))
+        hideParameterForTrackers('Target', 'outerRadius', ['EyeLogic'])
 
         self.params['innerRadius'] = Param(innerRadius,
                                            valType='num', inputType="single", categ='Target',
                                            hint=_translate("Size (radius) of the inner part of the target"),
                                            label=_translate("Inner radius"))
+        hideParameterForTrackers('Target', 'innerRadius', ['EyeLogic'])
 
         self.params['units'] = Param(units,
                                      valType='str', inputType="choice", categ='Target',
                                      allowedVals=['from exp settings'], direct=False,
                                      hint=_translate("Units of dimensions for this stimulus"),
                                      label=_translate("Spatial units"))
+        hideParameterForTrackers('Target', 'units', ['EyeLogic'])
 
         # Animation Params
         self.order += [
@@ -136,6 +178,7 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                             hint=_translate("Should the target move to the next position after a "
                                                             "keypress or after an amount of time?"),
                                             label=_translate("Progress mode"))
+        hideParameterForTrackers('Animation', 'progressMode', ['EyeLogic'])
 
         self.depends.append(
             {"dependsOn": "progressMode",  # must be param name
@@ -151,6 +194,7 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                          hint=_translate(
                                              "Time limit (s) after which progress to next position"),
                                          label=_translate("Target duration"))
+        hideParameterForTrackers('Animation', 'targetDur', ['EyeLogic'])
 
         self.depends.append(
             {"dependsOn": "progressMode",  # must be param name
@@ -166,17 +210,20 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                          hint=_translate(
                                              "Duration of the target expand/contract animation"),
                                          label=_translate("Expand / contract duration"))
+        hideParameterForTrackers('Animation', 'expandDur', ['EyeLogic'])
 
         self.params['expandScale'] = Param(expandScale,
                                            valType='num', inputType="single", categ='Animation',
                                            hint=_translate("How many times bigger than its size the target grows"),
                                            label=_translate("Expand scale"))
+        hideParameterForTrackers('Animation', 'expandScale', ['EyeLogic'])
 
         self.params['movementAnimation'] = Param(movementAnimation,
                                                  valType='bool', inputType="bool", categ='Animation',
                                                  hint=_translate(
                                                      "Enable / disable animations as target stim changes position"),
                                                  label=_translate("Animate position changes"))
+        hideParameterForTrackers('Animation', 'movementAnimation', ['EyeLogic'])
 
         self.depends.append(
             {"dependsOn": "movementAnimation",  # must be param name
@@ -192,6 +239,7 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                            hint=_translate(
                                                "Duration of the animation during position changes."),
                                            label=_translate("Movement duration"))
+        hideParameterForTrackers('Animation', 'movementDur', ['EyeLogic'])
 
         self.depends.append(
             {"dependsOn": "movementAnimation",  # must be param name
@@ -207,6 +255,7 @@ class EyetrackerCalibrationRoutine(BaseStandaloneRoutine):
                                            hint=_translate(
                                                "Duration of the delay between positions."),
                                            label=_translate("Target delay"))
+        hideParameterForTrackers('Animation', 'targetDelay', ['EyeLogic'])
 
     def writeMainCode(self, buff):
         # Alert user if eyetracking isn't setup

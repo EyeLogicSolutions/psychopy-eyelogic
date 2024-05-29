@@ -40,6 +40,8 @@ from ...themes import handlers, icons
 white = wx.Colour(255, 255, 255, 255)
 codeSyntaxOkay = wx.Colour(220, 250, 220, 255)  # light green
 
+class EyeTrackerChoiceEvent(wx.CommandEvent):
+    pass
 
 class ParamCtrls():
 
@@ -661,6 +663,15 @@ class ParamNotebook(wx.Notebook, handlers.ThemeMixin):
                     dependentCtrls = self.ctrls[thisDep['param']]
                 dependencyCtrls = self.ctrls[thisDep['dependsOn']]
                 condString = "dependencyCtrls.getValue() {}".format(thisDep['condition'])
+
+                def hideParamForEyetrackers(hideFor):
+                    if event is None:
+                        return self.parent.exp.settings.params['eyetracker'] in hideFor
+                    elif isinstance(event, EyeTrackerChoiceEvent):
+                        return event.String in hideFor
+                    else:
+                        return not dependentCtrls.getVisible()
+
                 if eval(condString):
                     action = thisDep['true']
                 else:
@@ -1864,6 +1875,35 @@ class DlgExperimentProperties(_BaseParamsDlg):
                                 size=size,
                                 style=style,
                                 timeout=timeout)
+
+        # changes in the eyetracker device choice necessitate changes to the (already existing) eyetracker calibration routines
+        eyetrackerCalibrationRoutinePages = []
+        for j in range(frame.routinePanel.GetPageCount()):
+            page = frame.routinePanel.GetPage(j)
+            if hasattr(page, 'routine'):
+                if isinstance(page.routine,
+                              psychopy.experiment.routines.eyetracker_calibrate.EyetrackerCalibrationRoutine):
+                    eyetrackerCalibrationRoutinePages.append(page)
+
+        if not hasattr(self, 'validateEyetrackingPages'):
+            eyetrackingPage = None
+            for jj in range(self.ctrls.GetPageCount()):
+                if self.ctrls.GetPageText(jj) == 'Eyetracking':
+                    eyetrackingPage = self.ctrls.GetPage(jj)
+                    # experiment properties dialog only holds one eyetracking page
+                    break
+
+            def validateEyetrackingPages(event=None):
+                eyetrackingPage.doValidate(event)
+                event = EyeTrackerChoiceEvent(event)
+                for page in eyetrackerCalibrationRoutinePages:
+                    for jj in range(page.ctrls.GetPageCount()):
+                        categoryPage = page.ctrls.GetPage(jj)
+                        categoryPage.doValidate(event)
+
+            self.validateEyetrackingPages = validateEyetrackingPages
+        eyetrackingPage.ctrls['eyetracker'].setChangesCallback(self.validateEyetrackingPages)
+
         self.frame = frame
         self.app = frame.app
         self.dpi = self.app.dpi

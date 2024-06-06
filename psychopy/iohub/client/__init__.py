@@ -141,6 +141,8 @@ class ioHubDeviceView():
         self.name = device_config.get('name', device_class_name.lower())
         self.device_class = device_class_name
         self.device_class_path=device_class_path
+        print2err('device_class_path: ' + device_class_path)
+        print2err('device_class_name: ' + device_class_name)
 
         rpc_request = ('EXP_DEVICE', 'GET_DEV_INTERFACE', device_class_name)
         r = self.hubClient._sendToHubServer(rpc_request)
@@ -1117,6 +1119,7 @@ class ioHubConnection():
             else:
                 full_device_class_name = getFullClassName(dev_cls)[len('psychopy.iohub.devices.'):]
                 full_device_class_name = full_device_class_name.replace('eyetracker.EyeTracker', 'EyeTracker')
+                print2err('full_device_class_name: ' + full_device_class_name)
                 d = ioHubDeviceView(self, full_device_class_name, dev_cls_name, dev_config)
 
             self.devices.addDevice(name, d)

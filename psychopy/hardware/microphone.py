@@ -148,11 +148,42 @@ class MicrophoneDevice(BaseDevice, aliases=["mic", "microphone"]):
             # if there are none, error
             if not len(_devices):
                 raise AudioInvalidCaptureDeviceError(_translate(
-                    "Could not choose default recording device as no recording devices are "
-                    "connected."
+                    "Could not choose default recording device as no recording "
+                    "devices are connected."
                 ))
-            # use first device
-            self._device = _devices[0]
+
+            # Try and get the best match which are compatible with the user's
+            # specified settings.
+            if sampleRateHz is not None or channels is not None:
+                self._device = self.findBestDevice(
+                    index=_devices[0].deviceIndex,  # use first that shows up
+                    sampleRateHz=sampleRateHz,
+                    channels=channels
+                )
+            else:
+                self._device = _devices[0]
+            
+            # Check if the default device settings are differnt than the ones 
+            # specified by the user, if so, warn them that the default device
+            # settings are overwriting their settings.
+            if channels is None:
+                channels = self._device.inputChannels
+            elif channels != self._device.inputChannels:
+                logging.warning(
+                    "Number of channels specified ({}) does not match the "
+                    "default device's number of input channels ({}).".format(
+                        channels, self._device.inputChannels))
+                channels = self._device.inputChannels
+
+            if sampleRateHz is None:
+                sampleRateHz = self._device.defaultSampleRate
+            elif sampleRateHz != self._device.defaultSampleRate:
+                logging.warning(
+                    "Sample rate specified ({}) does not match the default "
+                    "device's sample rate ({}).".format(
+                        sampleRateHz, self._device.defaultSampleRate))
+                sampleRateHz = self._device.defaultSampleRate
+
         elif isinstance(index, str):
             # if given a str that's a name from DeviceManager, get info from device
             device = DeviceManager.getDevice(index)
@@ -171,8 +202,13 @@ class MicrophoneDevice(BaseDevice, aliases=["mic", "microphone"]):
                 channels=channels
             )
 
-        logging.info('Using audio device #{} ({}) for audio capture. Full spec: {}'.format(
-            self._device.deviceIndex, self._device.deviceName, self._device))
+        devInfoText = ('Using audio device #{} ({}) for audio capture. '
+            'Full spec: {}').format(
+                self._device.deviceIndex, 
+                self._device.deviceName, 
+                self._device)
+        
+        logging.info(devInfoText)
 
         # error if specified device is not suitable for capture
         if not self._device.isCapture:
@@ -180,11 +216,12 @@ class MicrophoneDevice(BaseDevice, aliases=["mic", "microphone"]):
                 'Specified audio device not suitable for audio recording. '
                 'Has no input channels.')
 
-        # get the sample rate
-        self._sampleRateHz = \
-            self._device.defaultSampleRate if sampleRateHz is None else int(
-                sampleRateHz)
+        # get these values from the configured device
+        self._channels = self._device.inputChannels
+        logging.debug('Set recording channels to {} ({})'.format(
+            self._channels, 'stereo' if self._channels > 1 else 'mono'))
 
+        self._sampleRateHz = self._device.defaultSampleRate
         logging.debug('Set stream sample rate to {} Hz'.format(
             self._sampleRateHz))
 
@@ -198,13 +235,6 @@ class MicrophoneDevice(BaseDevice, aliases=["mic", "microphone"]):
             self._audioLatencyMode))
 
         assert 0 <= self._audioLatencyMode <= 4  # sanity check for pref
-
-        # set the number of recording channels
-        self._channels = \
-            self._device.inputChannels if channels is None else int(channels)
-
-        logging.debug('Set recording channels to {} ({})'.format(
-            self._channels, 'stereo' if self._channels > 1 else 'mono'))
 
         # internal recording buffer size in seconds
         assert isinstance(streamBufferSecs, (float, int))
@@ -804,7 +834,7 @@ class MicrophoneDevice(BaseDevice, aliases=["mic", "microphone"]):
 
         return self._recording.getSegment()  # full recording
 
-    def getCurrentVolume(self, timeframe=0.1):
+    def getCurrentVolume(self, timeframe=0.2):
         """
         Get the current volume measured by the mic.
 
@@ -831,20 +861,68 @@ class MicrophoneDevice(BaseDevice, aliases=["mic", "microphone"]):
 
         return clip.rms() * 10
 
-    # MicrophoneDevice isn't *really* a ResponseDevice, but it can have listeners - so may as
-    # well use the same functions to add/remove them
-    addListener = BaseResponseDevice.addListener
-    clearListeners = BaseResponseDevice.clearListeners
+    def addListener(self, listener, startLoop=False):
+        """
+        Add a listener, which will receive all the same messages as this device.
 
-    def dispatchMessages(self):
+        Parameters
+        ----------
+        listener : str or psychopy.hardware.listener.BaseListener
+            Either a Listener object, or use one of the following strings to create one:
+            - "liaison": Create a LiaisonListener with DeviceManager.liaison as the server
+            - "print": Create a PrintListener with default settings
+            - "log": Create a LoggingListener with default settings
+        startLoop : bool
+            If True, then upon adding the listener, start up an asynchronous loop to dispatch messages.
+        """
+        # add listener as normal
+        BaseResponseDevice.addListener(self, listener, startLoop=startLoop)
+        # if we're starting a listener loop, start recording
+        if startLoop:
+            self.start()
+
+    def clearListeners(self):
+        """
+        Remove any listeners from this device.
+
+        Returns
+        -------
+        bool
+            True if completed successfully
+        """
+        # clear listeners as normal
+        BaseResponseDevice.clearListeners(self)
+        # stop recording
+        self.stop()
+
+    def dispatchMessages(self, clear=True):
         """
         Dispatch current volume as a MicrophoneResponse object to any attached listeners.
+
+        Parameters
+        ----------
+        clear : bool
+            If True, will clear the recording up until now after dispatching the volume. This is
+            useful if you're just sampling volume and aren't wanting to store the recording.
         """
         # create a response object
         message = MicrophoneResponse(
             logging.defaultClock.getTime(),
             self.getCurrentVolume()
         )
+        # clear recording if requested (helps with continuous running)
+        if clear and self.isRecBufferFull:
+            # work out how many samples is 0.1s
+            toSave = min(
+                int(0.2 * self._sampleRateHz),
+                int(self.maxRecordingSize / 2)
+            )
+            # get last 0.1s so we still have enough for volume measurement
+            savedSamples = self._recording._samples[-toSave:, :]
+            # clear samples
+            self._recording.clear()
+            # reassign saved samples
+            self._recording.write(savedSamples)
         # dispatch to listeners
         for listener in self.listeners:
             listener.receiveMessage(message)

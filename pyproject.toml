@@ -1,5 +1,3 @@
-[tool.pdm]
-version = { source = "file", path = "psychopy/__init__.py" }
 
 [project]
 name = "psychopy"
@@ -27,7 +25,7 @@ classifiers = [
     ]
     
 dependencies = [
-    "numpy",  # use numpy<1.24 for psychopy<2023.1
+    "numpy<2.0",  # use numpy<1.24 for psychopy<2023.1
     "scipy",
     "matplotlib",
     "pyglet == 1.4.11; platform_system == \"Windows\"",
@@ -110,11 +108,10 @@ building = [
     "dmgbuild; platform_system == \"Darwin\"",
 ]
 suggested = [
+    "sounddevice",
     "pylsl>=1.16.1", # lab streaming layer for general connectivity
     "xlwt",  # writing excel files with pandas
     "h5py",  # to read hdf5 files for analysis
-    "google-api-python-client",
-    "pygaze>=1.1.2",
     "tobii_research",
     "badapted>=0.0.3",
     "egi-pynetstation>=0.0.0rc1",
@@ -137,16 +134,30 @@ psychopy = "psychopy.app.psychopyApp:main"
 
 [build-system]
 requires = [
-    "pdm-backend",
     "distro; platform_system == \"Linux\"",
     "tomlkit",
+    "setuptools>=41", "wheel", "setuptools-git-versioning>=2.0,<3",
     ]
-build-backend = "pdm.backend"
+build-backend = "setuptools.build_meta"
 
-[tool.pdm.build]
-includes = []
-excludes = ["building/"]
-#source-includes = ["tests/"]
+[tool.setuptools]
+# this package will read some included files in runtime, avoid installing it as .zip
+zip-safe = false
+
+[tool.setuptools-git-versioning]
+enabled = true
+version_file = "psychopy/VERSION" 
+count_commits_from_version_file = true  # <--- enable commits tracking
+dev_template = "{tag}.{branch}{ccount}"  # e.g. or "{tag}.{branch}{ccount}+git.{sha}.dirty"
+dirty_template = "{tag}.{branch}{ccount}"  # 
+branch_formatter = "utils:_branchFormatter" 
+
+[tool.setuptools.packages.find]
+# https://setuptools.pypa.io/en/latest/userguide/package_discovery.html#automatic-discovery
+where = ["."]
+# include = ["pkg*"]
+exclude = ["psychopy/tests", "building"]
+namespaces = false
 
 [tool.distutils.bdist_wheel]
 universal = 1

@@ -1075,6 +1075,46 @@ class Session:
                 })
 
         return True
+
+    def getAllTrials(self):
+        """
+        Returns all trials (elapsed, current and upcoming) with an index indicating which trial is 
+        the current trial.
+
+        Returns
+        -------
+        list[Trial]
+            List of trials, in order (oldest to newest)
+        int
+            Index of the current trial in this list
+        """
+        # return None if there's no current experiment
+        if self.currentExperiment is None:
+            return None
+        # get trials from current experiment
+        trials, i = self.currentExperiment.getAllTrials()
+        
+        return trials, i
+
+    def getCurrentTrial(self, asDict=False):
+        """
+        Returns the current trial (`.thisTrial`)
+
+        Returns
+        -------
+        Trial
+            The current trial
+        """
+        # return None if there's no current experiment
+        if self.currentExperiment is None:
+            return None
+        # get trial from current experiment
+        trial = self.currentExperiment.getCurrentTrial()
+        # convert to dict if needed
+        if asDict and trial is not None:
+            trial = trial.getDict()
+        
+        return trial
     
     def getFutureTrial(self, n=1, asDict=False):
         """
@@ -1113,13 +1153,13 @@ class Session:
             How many trials into the future to look, by default 1
         start : int, optional
             How many trials into the future to start looking at, by default 0
+        asDict : bool
+            If True, convert Trial objects to a dict before returning (useful for Liaison)
         
         Returns
         -------
         list[Trial or dict or None]
             List of Trial objects n long. Any trials beyond the last trial are None.
-        asDict : bool
-            If True, convert Trial objects to a dict before returning (useful for Liaison)
         """
         # blank list to store trials in
         trials = []

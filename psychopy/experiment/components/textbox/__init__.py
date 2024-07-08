@@ -110,7 +110,7 @@ class TextboxComponent(BaseVisualComponent):
         self.params['draggable'] = Param(
             draggable, valType="code", inputType="bool", categ="Layout",
             updates="constant",
-            label="Draggable?",
+            label=_translate("Draggable?"),
             hint=_translate(
                 "Should this stimulus be moveble by clicking and dragging?"
             )
@@ -215,7 +215,7 @@ class TextboxComponent(BaseVisualComponent):
         code = (
             "%(name)s = visual.TextBox2(\n"
             "     win, text=%(text)s, placeholder=%(placeholder)s, font=%(font)s,\n"
-            "     pos=%(pos)s, draggable=%(draggable)s, " + unitsStr +
+            "     ori=%(ori)s, pos=%(pos)s, draggable=%(draggable)s, " + unitsStr +
             "     letterHeight=%(letterHeight)s,\n"
             "     size=%(size)s, borderWidth=%(borderWidth)s,\n"
             "     color=%(color)s, colorSpace=%(colorSpace)s,\n"
@@ -261,6 +261,7 @@ class TextboxComponent(BaseVisualComponent):
                 "  letterHeight: %(letterHeight)s,\n"
                 "  lineSpacing: %(lineSpacing)s,\n"
                 "  size: %(size)s," + unitsStr +
+                "  ori: %(ori)s,\n"
                 "  color: %(color)s, colorSpace: %(colorSpace)s,\n"
                 "  fillColor: %(fillColor)s, borderColor: %(borderColor)s,\n"
                 "  languageStyle: %(languageStyle)s,\n"

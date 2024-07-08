@@ -489,6 +489,39 @@ class ExperimentHandler(_ComparisonMixin):
         # rewind trials in current loop
         self.currentLoop.rewindTrials(n)
     
+    def getAllTrials(self):
+        """
+        Returns all trials (elapsed, current and upcoming) with an index indicating which trial is 
+        the current trial.
+
+        Returns
+        -------
+        list[Trial]
+            List of trials, in order (oldest to newest)
+        int
+            Index of the current trial in this list
+        """
+        # return None if there isn't a TrialHandler2 active
+        if not isinstance(self.currentLoop, TrialHandler2):
+            return [None], 0
+        # get all trials from current loop
+        return self.currentLoop.getAllTrials()
+
+    def getCurrentTrial(self):
+        """
+        Returns the current trial (`.thisTrial`)
+
+        Returns
+        -------
+        Trial
+            The current trial
+        """
+        # return None if there isn't a TrialHandler2 active
+        if not isinstance(self.currentLoop, TrialHandler2):
+            return None
+        
+        return self.currentLoop.getCurrentTrial()
+    
     def getFutureTrial(self, n=1):
         """
         Returns the condition for n trials into the future, without
@@ -538,18 +571,31 @@ class ExperimentHandler(_ComparisonMixin):
         this = self.thisEntry
         # fetch data from each (potentially-nested) loop
         for thisLoop in self.loopsUnfinished:
-            names, vals = self._getLoopInfo(thisLoop)
-            for n, name in enumerate(names):
-                this[name] = vals[n]
-                # make sure name is in data names
-                if name not in self.dataNames:
-                    self.dataNames.append(name)
+            self.updateEntryFromLoop(thisLoop)
         # add the extraInfo dict to the data
         if type(self.extraInfo) == dict:
             this.update(self.extraInfo)
         self.entries.append(this)
         # add new entry with its
         self.thisEntry = {}
+
+    def updateEntryFromLoop(self, thisLoop):
+        """
+        Add all values from the given loop to the current entry.
+
+        Parameters
+        ----------
+        thisLoop : BaseLoopHandler
+            Loop to get fields from
+        """
+        # for each name and value in the current trial...
+        names, vals = self._getLoopInfo(thisLoop)
+        for n, name in enumerate(names):
+            # add/update value
+            self.thisEntry[name] = vals[n]
+            # make sure name is in data names
+            if name not in self.dataNames:
+                self.dataNames.append(name)
 
     def getAllEntries(self):
         """Fetches a copy of all the entries including a final (orphan) entry
@@ -755,6 +801,7 @@ class ExperimentHandler(_ComparisonMixin):
         # put in context
         context = {
             'type': "trials_data",
+            'thisTrial': self.thisEntry,
             'trials': trials.to_dict(orient="records"),
             'priority': self.columnPriority,
             'threshold': priorityThreshold,
